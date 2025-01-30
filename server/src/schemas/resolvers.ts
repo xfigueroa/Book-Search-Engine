@@ -1,5 +1,5 @@
 import User from '../models/User.js'
-import { signToken} from '../services/auth.js'
+import { signToken, authenticateGraphQL } from '../services/auth.js'
 
 
 interface User {
@@ -20,21 +20,20 @@ interface Book {
     description?: string;
 } 
 
-interface Context {
-    user: {_id: string} | null; 
-}
+
 
 const resolvers = {
   Query: {
-    me: async (_: any, __: any, context: Context) => {
-      if (!context.user) throw new Error('Not authenticated');
-      return await User.findById(context.user._id);
+    me: async (_: any, { token }: { token: string }) => {
+      const userData = authenticateGraphQL(token);
+      if (!userData) throw new Error('Not authenticated');
+      return await User.findById(userData._id);
     },
   },
   Mutation: {
     createUser: async (_: any, { username, email, password }: User) => {
       const user = await User.create({ username, email, password });
-      const token = signToken(username, email, user._id);
+      const token = signToken(username, email, String(user._id));
       return { token, user };
     },
     login: async (_: any, { email, password }: Login) => {
@@ -46,21 +45,23 @@ const resolvers = {
       if (!isPasswordValid) {
         throw new Error('Incorrect password');
       }
-      const token = signToken(user.username, user.email, user._id);
+      const token = signToken(user.username, user.email, String(user._id));
       return { token, user };
     },
-    saveBook: async (_: any, { bookId, title, authors, description }: Book, context: Context) => {
-      if (!context.user) throw new Error('Not authenticated');
+    saveBook: async (_: any, { token, bookId, title, authors, description }: { token: string } & Book) => {
+      const userData = authenticateGraphQL(token);
+      if (!userData) throw new Error('Not authenticated');
       return await User.findOneAndUpdate(
-        { _id: context.user._id },
+        { _id: userData._id },
         { $addToSet: { savedBooks: { bookId, title, authors, description } } },
         { new: true }
       );
     },
-    deleteBook: async (_: any, { bookId }: Book, context: Context) => {
-      if (!context.user) throw new Error('Not authenticated');
+    deleteBook: async (_: any, { token, bookId }: { token: string, bookId: string }) => {
+      const userData = authenticateGraphQL(token);
+      if (!userData) throw new Error('Not authenticated');
       return await User.findOneAndUpdate(
-        { _id: context.user._id },
+        { _id: userData._id },
         { $pull: { savedBooks: { bookId } } },
         { new: true }
       );
