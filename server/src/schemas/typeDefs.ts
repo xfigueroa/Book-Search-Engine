@@ -1,5 +1,5 @@
-
-const typeDefs = `
+import { gql } from 'apollo-server-express';
+const typeDefs = gql`
   type User {
     _id: ID!
     username: String!
@@ -23,11 +23,20 @@ const typeDefs = `
     me: User
   }
 
-  type Mutation {
+  input BookInput {
+    bookId: String!
+    authors: [String]
+    description: String
+    title: String
+    image: String
+    link: String
+  }
+
+  type Mutation {    
     login(email: String!, password: String!): Auth
-    createUser(username: String!, email: String!, password: String!): Auth
-    saveBook(bookId: ID!, title: String, authors: [String], description: String): User
-    deleteBook(bookId: ID!): User
+    addUser(username: String!, email: String!, password: String!): Auth
+    saveBook(book: BookInput!): User
+    deleteBook(bookId: String!): User
   }
 `;
 

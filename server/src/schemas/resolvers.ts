@@ -1,67 +1,42 @@
 import User from '../models/User.js'
-import { signToken, authenticateGraphQL } from '../services/auth.js'
-
-
-interface User {
-    username: string;
-    password: string;
-    email: string;
-}
-
-interface Login {
-    email: string;
-    password: string;
-}
-
-interface Book {
-    bookId: string;
-    title?: string;
-    authors?: string[];
-    description?: string;
-} 
-
+import { signToken } from '../services/auth.js'
+import { AuthenticationError } from 'apollo-server-express';
 
 
 const resolvers = {
   Query: {
-    me: async (_: any, { token }: { token: string }) => {
-      const userData = authenticateGraphQL(token);
-      if (!userData) throw new Error('Not authenticated');
-      return await User.findById(userData._id);
+    me: async (_parent, _args, context) => {
+      if (!context.user) throw new AuthenticationError('Debes iniciar sesión');
+      return User.findById(context.user.data._id);
     },
   },
   Mutation: {
-    createUser: async (_: any, { username, email, password }: User) => {
-      const user = await User.create({ username, email, password });
-      const token = signToken(username, email, String(user._id));
-      return { token, user };
-    },
-    login: async (_: any, { email, password }: Login) => {
+
+    login: async (_parent, { email, password }) => {
       const user = await User.findOne({ email });
-      if (!user) {
-        throw new Error('No user with this email');
+      if (!user || !(await user.isCorrectPassword(password))) {
+        throw new AuthenticationError('Credenciales incorrectas');
       }
-      const isPasswordValid = await user.isCorrectPassword(password);
-      if (!isPasswordValid) {
-        throw new Error('Incorrect password');
-      }
-      const token = signToken(user.username, user.email, String(user._id));
+      const token = signToken(user);
       return { token, user };
     },
-    saveBook: async (_: any, { token, bookId, title, authors, description }: { token: string } & Book) => {
-      const userData = authenticateGraphQL(token);
-      if (!userData) throw new Error('Not authenticated');
-      return await User.findOneAndUpdate(
-        { _id: userData._id },
-        { $addToSet: { savedBooks: { bookId, title, authors, description } } },
+    addUser: async (_parent, { username, email, password }) => {
+      const user = await User.create({ username, email, password });
+      const token = signToken(user);
+      return { token, user };
+    },
+    saveBook: async (_parent, { book }, context) => {
+      if (!context.user) throw new AuthenticationError('Debes iniciar sesión');
+      return User.findByIdAndUpdate(
+        context.user.data._id,
+        { $addToSet: { savedBooks: book } },
         { new: true }
       );
     },
-    deleteBook: async (_: any, { token, bookId }: { token: string, bookId: string }) => {
-      const userData = authenticateGraphQL(token);
-      if (!userData) throw new Error('Not authenticated');
-      return await User.findOneAndUpdate(
-        { _id: userData._id },
+    deleteBook: async (_parent, { bookId }, context) => {
+      if (!context.user) throw new AuthenticationError('Debes iniciar sesión');
+      return User.findByIdAndUpdate(
+        context.user.data._id,
         { $pull: { savedBooks: { bookId } } },
         { new: true }
       );
