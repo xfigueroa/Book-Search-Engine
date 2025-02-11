@@ -7,50 +7,31 @@ import Auth from '../utils/auth';
 import { removeBookId } from '../utils/localStorage';
 
 const SavedBooks = () => {
-  // Fetch user data using GraphQL query
   const { loading, data } = useQuery(GET_ME);
   const userData = data?.me || {};
-
-  // Define delete book mutation
   const [deleteBook] = useMutation(DELETE_BOOK, {
     update(cache, { data: { deleteBook } }) {
-      const { me } = (cache.readQuery({ query: GET_ME }) as { me: any }) || { me: {} };
       cache.writeQuery({
         query: GET_ME,
-        data: { me: { ...me, savedBooks: deleteBook.savedBooks } },
+        data: { me: { ...userData, savedBooks: deleteBook.savedBooks } },
       });
     },
   });
 
-  if (loading) {
-    return <h2>LOADING...</h2>;
-  }
+  if (loading) return <h2>Loading...</h2>;
 
-  // Function to delete a book
-  const handleDeleteBook = async (bookId: string) => {
-    const token = Auth.loggedIn() ? Auth.getToken() : null;
-    if (!token) return false;
-  
+  const handleDeleteBook = async (bookId) => {
     try {
-      const { data } = await deleteBook({
-        variables: { bookId },
-        update(cache, { data: { deleteBook } }) {
-          const { me } = (cache.readQuery({ query: GET_ME }) as { me: any }) || { me: {} };
-          cache.writeQuery({
-            query: GET_ME,
-            data: { me: { ...me, savedBooks: deleteBook.savedBooks } },
-          });
-        },
-      });
-  
-      console.log("✅ Book deleted:", data);
-      removeBookId(bookId);
+      await deleteBook({ variables: { bookId } });
     } catch (err) {
-      console.error("❌ Error deleting book:", err);
+      console.error(err);
     }
   };
-  
 
+
+  // Function to delete a book
+  
+  
   return (
     <>
       <div className='text-light bg-dark p-5'>

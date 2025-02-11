@@ -1,8 +1,21 @@
 export interface Book {
-  authors: string[],
-  description: string;
-  bookId: string;
-  image: string;
-  link: string;
-  title: string;
+  id: string;
+
+  volumeInfo: {
+
+    title: string;
+
+    authors?: string[];
+
+    description?: string;
+
+    imageLinks?: {
+
+      thumbnail?: string;
+
+    };
+
+    infoLink?: string;
+
+  };
 }

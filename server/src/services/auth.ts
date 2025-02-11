@@ -9,19 +9,19 @@ interface JwtPayload {
   email: string;
 }
 
-export const authenticateGraphQL = (token: string | undefined): JwtPayload | null => {
+export const authenticateGraphQL = (token: string | undefined): { data: JwtPayload } | null => {
   if (!token) return null;
   
   try {
     const secretKey = process.env.JWT_SECRET_KEY || '';
-    const decoded = jwt.verify(token, secretKey) as JwtPayload;
-    return decoded;
+    const decoded = jwt.verify(token.replace('Bearer ', ''), secretKey) as JwtPayload;
+    return { data: decoded };
   } catch (error) {
     return null;
   }
 };
 
-export const signToken = (username: string, email: string, _id: string) => {
+export const signToken = (username: string, email: string, _id: string): string => {
   const payload = { username, email, _id };
   const secretKey = process.env.JWT_SECRET_KEY || '';
 
