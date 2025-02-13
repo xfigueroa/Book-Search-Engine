@@ -7,7 +7,7 @@ import Auth from './utils/auth';
 import Navbar from './components/Navbar';
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:3001/graphql', // Ensure this URL is correct
+  uri: process.env.REACT_APP_GRAPHQL_URI || 'http://localhost:3001/graphql', // Ensure this URL is correct
 });
 
 const authLink = setContext((_, { headers }) => {
